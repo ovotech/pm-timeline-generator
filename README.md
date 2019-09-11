@@ -34,3 +34,10 @@ We have a window of 13:31 Jim:21 for Customer facing nachoss which I have put in
 ng for now.
 2019-09-10 17:58:03 Jim So Based on this we should stand down for now. Both myself and <@U054TBYPJ> will be picking up the remaining snails offline. Thanks all!
 ```
+
+The slack token needs the follow permissions:
+
+- `channels:history` - Access user’s public channels with
+- `channels:read` - Access information about user’s public channels
+- `users:read` - Access your workspace’s profile information
+
