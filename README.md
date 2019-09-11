@@ -8,7 +8,7 @@ pip3 install slackclient
 
 export SLACK_API_TOKEN=aaaa-111111111111111111111111111111111111111111111111111111111111111111111
 
-python3 script.py
+python3 script.py inc-000 :small_blue_diamond:
 ```
 
 ```

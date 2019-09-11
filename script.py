@@ -2,6 +2,7 @@ from datetime import datetime
 from functools import lru_cache
 import json
 import os
+import sys
 import time
 
 import slack
@@ -56,11 +57,20 @@ def print_timestamped_message(messages):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) == 3:
+        reaction = sys.argv[2]
+        if not (reaction[-1] == ":" and reaction[0] == ":"):
+            raise Exception(
+                "reaction should be wrapped in colons: `:small_blue_diamond:`")
+        channel_name = sys.argv[1]
+    else:
+        raise Exception("Invalid number of args")
+
     client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'])
     # channels = list(list_channels(client))
     # print(len(channels))
 
-    channel = find_channel(client, 'inc-192')
+    channel = find_channel(client, channel_name)
 
     # print(json.dumps(channel, indent=4))
     # history = list(get_channel_history(client, channel['id']))
