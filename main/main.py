@@ -13,9 +13,9 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 SLACK_TOKEN = os.environ["SLACK_TOKEN"]
 
 
-def get_channel_history(client, channel_id):
-    logging.info('Getting channel history from this point in time backwards')
-    latest = str(time.mktime(datetime.now().timetuple()))
+def get_channel_history(client, channel_id, latest=None):
+    if latest is None:
+        latest = str(time.mktime(datetime.now().timetuple()))
     resp = client.channels_history(channel=channel_id, latest=latest)
     messages = resp.data['messages']
     yield from messages

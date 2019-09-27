@@ -10,6 +10,7 @@ import boto3
 
 """Slackbot secrets"""
 SIGNING_SECRET = os.environ["SIGNING_SECRET"]
+MAIN_LAMBDA_ARN = os.environ["MAIN_LAMBDA_ARN"]
 
 
 def verify_slack_request(
@@ -76,8 +77,7 @@ def process_command(command_data):
     logging.info(f'Triggering main lambda with {command_data}')
     awslambda = boto3.client('lambda')
     awslambda.invoke(
-                    FunctionName='arn:aws:lambda:eu-west-1:'
-                    '456226616369:function:timeline_exporter',
+                    FunctionName=MAIN_LAMBDA_ARN,
                     InvocationType='Event',
                     Payload=json.dumps(command_data)
                     )
