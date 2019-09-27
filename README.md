@@ -1,17 +1,32 @@
 ## Post-mortem Timeline Generator
 
-Mark a message in a slack channel with `:small_blue_diamond:` and point the
+Mark a message in a public slack channel with `:small_blue_diamond:` and point the
 script at the channel to generate a timeline of events.
 
-```
-pip3 install slackclient
+Trigger with:
+`/timeline :small_blue_diamond:`
 
-export SLACK_API_TOKEN=aaaa-111111111111111111111111111111111111111111111111111111111111111111111
+## Manual deploy or update:
 
-python3 script.py inc-000 :small_blue_diamond:
+Set:
+```
+BUCKET='deploy-timeline' # Bucket to hold .yml in AWS for SAM
+STACK_NAME=<stackname> # CF stack name
+BOT_TOKEN=<slack bot token> # From slack app
+SLACK_TOKEN=<slack app token>
+SIGNING_SECRET=<slack signing secret>
+
+```
+Run:
+```
+./package.sh
+sam package --template-file deploy.yml --s3-bucket $BUCKET --output-template-file packaged.yml --region eu-west-1
+sam deploy --template-file packaged.yml --stack-name $STACK_NAME --capabilities CAPABILITY_NAMED_IAM --region eu-west-1 --parameter-overrides SigningSecret=$SIGNING_SECRET SlackBotToken=$BOT_TOKEN SlackAppToken=$SLACK_TOKEN
+./package_cleanup.sh
+
 ```
 
-```
+
 2019-09-10 15:28:14 Jim <@U054TBYPJ> set the channel purpose: INC-000 - Bongo snails deletion from Spark AD sync - <https://ovotech.atlassian.net/browse/INC-192>
 2019-09-10 15:33:21 Jim I have been told not to re-create any for now as Bongo may be able to reverse this :crossed_fingers::skin-tone-3:  - This was before I recreated the finance@ovo one
 to get it sending all nachos back to Gombo. This one should be working as before, but there will be no historical nachoss which is fine as they are all in their Gombo Service Desk

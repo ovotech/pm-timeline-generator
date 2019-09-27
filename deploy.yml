@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: 'AWS::Serverless-2016-10-31'
+Description: Two lambdas for Timeline Slackbot
+
+Parameters:
+  SigningSecret:
+    Type: String
+    Description: Slack signing secret variable
+  SlackBotToken:
+    Type: String
+    Description: Slack bot oauth token
+  SlackAppToken:
+    Type: String
+    Description: Slack app oauth token
+
+Resources: 
+  SlackTimelineEntrypointRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+                - "sts:AssumeRole"
+      Policies: 
+        -
+          PolicyName: "slack-timeline-entrypoint-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:CreateLogGroup"
+                Resource: "*"
+              -
+                Effect: "Allow"
+                Action: 
+                  - "lambda:InvokeFunction"
+                Resource: !GetAtt SlackTimelineMainLambda.Arn
+      RoleName: "slack-timeline-entrypoint-role"
+
+  SlackTimelineMainRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+                - "sts:AssumeRole"
+      Policies: 
+        -
+          PolicyName: "slack-timeline-main-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:CreateLogGroup"
+                Resource: "*"
+      RoleName: "slack-timeline-main-role"
+
+ 
+  SlackTimelineMainLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: slack-timeline-main-lambda
+      Handler: main.lambda_handler
+      Runtime: python3.7
+      CodeUri: ./main/lambda_package.zip
+      Description: Processes channel data and returns output as file
+      MemorySize: 128
+      Timeout: 900
+      Role: !GetAtt SlackTimelineMainRole.Arn
+      Environment:
+        Variables:
+          BOT_TOKEN: !Ref SlackBotToken
+          SLACK_TOKEN: !Ref SlackAppToken
+
+  SlackTimelineEntrypoint:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: slack-timeline-entrypoint-lambda
+      Handler: entrypoint.lambda_handler
+      Runtime: python3.7
+      CodeUri: ./entrypoint/entrypoint.py
+      Description: 'Triggers main lambda from API gateway request triggered from slash command'
+      MemorySize: 128
+      Timeout: 3
+      Role: !GetAtt SlackTimelineEntrypointRole.Arn
+      Environment:
+        Variables:
+          MAIN_LAMBDA_ARN: !GetAtt SlackTimelineMainLambda.Arn
+          SIGNING_SECRET: !Ref SigningSecret
+      Events:
+        SlackTimelineEntrypointAPI:
+          Type: Api
+          Properties:
+            Path: /slack_timeline_api_endpoint
+            Method: ANY
