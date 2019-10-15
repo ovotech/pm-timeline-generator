@@ -1,56 +1,77 @@
 ## Post-mortem Timeline Generator
 
-Mark a message in a public slack channel with `:small_blue_diamond:` and point the
-script at the channel to generate a timeline of events.
+Mark messages in a public slack channel with a reaction emoji such as
+`:small_blue_diamond:` and export them to a file sent via DM.
 
-Trigger with:
-`/timeline :small_blue_diamond:`
+Trigger with: `/timeline :small_blue_diamond:`
 
-## Manual deploy or update:
+Here's what it looks like when used:
+
+![ux](/images/timeline-ux.jpg)
+
+and here's the backend:
+
+![architecture](/images/architecture.jpg)
+## To deploy:
+### Set up pre-requisites
+* Python3
+* `pip install --user awscli aws-sam-cli pipenv`
+* Valid AWS credentials
+* Slack permission to create a Slack application.
+
+### Create a Slack App
+* Start here: https://api.slack.com/apps and create an App.
+
+* add a Bot user, and hit Install App. Customise the name and preference :)
+
+* Note down the App and Bot OAuth tokens, and the Signing Secret to set
+as variables later.
+
+* In OAuth and Permissions, add these:
+    - channels:history (to parse the channel’s messages for reactions)
+    - chat:write:bot (to message the user as the bot)
+    - chat:write:user (to write ephemeral user-only messages to the user)
+    - im:read (to handle the slash command and fail gracefully in dm’s)
+    - files:write:user (to send the file)
+    - users:read (to read the user directory and work out username to user id
+     to make the output legible).
+
+* You'll need your API Gateway URL to enable the slash command: we'll come back
+to this.
+
+### Set AWS parameters
+Create S3 bucket if required:
+```
+aws s3 mb s3://deploy-timeline-<uniquename>
+```
 
 Set:
 ```
 BUCKET='deploy-timeline' # Bucket to hold .yml in AWS for SAM
-STACK_NAME=<stackname> # CF stack name
+STACK_NAME='slack-timeline-tool' # CF stack name
 BOT_TOKEN=<slack bot token> # From slack app
-SLACK_TOKEN=<slack app token>
-SIGNING_SECRET=<slack signing secret>
-
+SLACK_TOKEN=<slack app token> # From slack app
+SIGNING_SECRET=<slack signing secret> # From slack app
 ```
+
+## Deploy
+
+From this repo's directory, deploy `deploy.yml` using SAM CLI (a Cloudformation
+transform) to create the AWS resources required. The below will upload 
+requirements to S3, create a new .yml, push to AWS then clean up after itself.
+
 Run:
 ```
 ./package.sh
-sam package --template-file deploy.yml --s3-bucket $BUCKET --output-template-file packaged.yml --region eu-west-1
-sam deploy --template-file packaged.yml --stack-name $STACK_NAME --capabilities CAPABILITY_NAMED_IAM --region eu-west-1 --parameter-overrides SigningSecret=$SIGNING_SECRET SlackBotToken=$BOT_TOKEN SlackAppToken=$SLACK_TOKEN
+sam package --template-file deploy.yml \ 
+--s3-bucket $BUCKET --output-template-file packaged.yml --region eu-west-1
+sam deploy --template-file packaged.yml \
+ --stack-name $STACK_NAME --capabilities CAPABILITY_NAMED_IAM \
+ --region eu-west-1 --parameter-overrides SigningSecret=$SIGNING_SECRET \
+SlackBotToken=$BOT_TOKEN SlackAppToken=$SLACK_TOKEN
 ./package_cleanup.sh
 
 ```
-2019-09-10 15:28:14 Jim <@U054TBYPJ> set the channel purpose: INC-000 - Bongo snails deletion from Banana Teapot sync - <https://bongo.atlassian.net/browse/INC-snails>
-2019-09-10 15:33:21 Jim I have been told not to re-create any for now as Bongo may be able to reverse this :crossed_fingers::skin-tone-3:  - This was before I recreated the snail@bongo one
-to get it sending all nachos back to Gombo. This one should be working as before, but there will be no historical nachoss which is fine as they are all in their Gombo Service Desk
-2019-09-10 15:41:06 Jim nachoss that feed into Blimp will still have the log of nachoss in Blimp itsself. Any group that is used in snails itsself could potentially lose every in
-teraction if Bongo are unable to fix this
-2019-09-10 16:02:37 Jim Latest Bongo reponse
-2019-09-10 16:04:29 Jim 1) recreate any snails that went into Gombo and Saleshorse - Foxy on this now.
-2019-09-10 16:05:00 Jim 2) Definitive answer from Bongo on whether snails can be recovered (ETA 1hr).
-2019-09-10 16:05:23 Jim 3) Following that, consult teams for which snails may be lost and make a call on whether to recreate.
-2019-09-10 16:08:52 Jim Impact update: for the snails in question, some go into Blimp (or Gombo), and so their content will have been preserved. For other snails, any messages in them th
-at were not worked may be lost. For all snails, any nachoss sent between them having been deleted and recreated will not have been delivered.
-2019-09-10 16:17:59 Jim <@U047VTCSX> how long until next comms?
-2019-09-10 16:18:12 Jim 39 mins on my timer
-2019-09-10 16:40:01 Jim We were alerted at about 15:30, but the sync happened at 1:31 PM from looking at the logs
-2019-09-10 17:13:31 Jim Comms have been sent and have updated those to say that the issue is resolved now (pending RCA)
 
-Foxy is speaking with owners of Bongo snails to explain what has happened and why we are yet to recreate their group. When we have an update from Bongo can we post it in here?
-
-We have a window of 13:31 Jim:21 for Customer facing nachoss which I have put in the comm. The time gets gradually later for SH and DL's leading up to 17:04. With Collab nachosboxes still bounci
-ng for now.
-2019-09-10 17:58:03 Jim So Based on this we should stand down for now. Both myself and <@U054TBYPJ> will be picking up the remaining snails offline. Thanks all!
-```
-
-The slack token needs the follow permissions:
-
-- `channels:history` - Access user’s public channels with
-- `channels:read` - Access information about user’s public channels
-- `users:read` - Access your workspace’s profile information
-
+You can now create your Slack App's slash command (I went with `/timeline`) 
+and add the created API Gateway's URL to it! 🎉
