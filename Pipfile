@@ -7,7 +7,7 @@ verify_ssl = true
 flake8 = "*"
 
 [packages]
-slackclient = "*"
+slack-sdk = "*"
 
 [requires]
 python_version = "3.7"
