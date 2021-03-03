@@ -8,6 +8,7 @@ flake8 = "*"
 
 [packages]
 slack-sdk = "*"
+pytz = "*"
 
 [requires]
 python_version = "3.7"

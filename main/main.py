@@ -5,9 +5,11 @@ from functools import lru_cache
 import html
 import os
 import logging
+import pytz
 
 from slack_sdk import WebClient
 
+logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 SLACK_TOKEN = os.environ["SLACK_TOKEN"]
@@ -24,7 +26,7 @@ def get_channel_history(client, channel_id, latest=None):
 
 
 def get_reacted_messages(client, channel_id, reaction):
-    logging.info(f"Getting all messages with {reaction}")
+    logger.info(f"Getting all messages with {reaction}")
     reaction = reaction[1:-1]
     for message in get_channel_history(client, channel_id):
         if "reactions" in message:
@@ -59,11 +61,13 @@ def format_slack_msg(client, text):
 
 
 def collate_timestamped_messages(client, messages):
-    logging.info("Collating all messages into human readable output string")
+    logger.info("Collating all messages into human readable output string")
     output = str()
+    tz = pytz.timezone("Europe/London")
     for message in messages:
         user_name = who_posted_message(client, message)
         timestamp = int(message["ts"].split(".")[0])
+
         text = message["text"]
 
         if "attachments" in message:
@@ -76,18 +80,34 @@ def collate_timestamped_messages(client, messages):
                 text = text + "\n" + other_text
 
         text = format_slack_msg(client, text)
-        output += f"{datetime.fromtimestamp(timestamp)} " f"{user_name} : {text}\n\n"
+        dt = datetime.fromtimestamp(timestamp, tz)
+        output += f"{dt.date()} {dt.time()} {user_name} : {text}\n\n"
 
     return output
 
 
 def send_timeline_as_file(client, chan, output):
-    logging.info("Sending multiline string as file content to Slack user")
+    logger.info("Sending multiline string as file content to Slack user")
     return client.files_upload(channels=chan, content=output, title="Timeline")
 
 
+def configure_logging() -> None:
+    if len(logging.getLogger().handlers) > 0:
+        # The Lambda environment pre-configures a handler logging to stderr.
+        # If a handler is already configured,
+        # `.basicConfig` does not execute. Thus we set the level directly.
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)-8s %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+
+
 def lambda_handler(event, context):
-    logging.info(f"Event trigger recieved: {event}")
+    configure_logging()
+    logger.info(f"Event trigger recieved: {event}")
     main(event)
     return None
 
@@ -98,7 +118,7 @@ def main(command_data):
     channel_name = command_data["channel_name"][0]
     user_id = command_data["user_id"][0]
 
-    logging.info("Getting Slack clients")
+    logger.info("Getting Slack clients")
     client = WebClient(token=SLACK_TOKEN)
     bot_client = WebClient(token=BOT_TOKEN)
 
@@ -114,7 +134,7 @@ def main(command_data):
     if file_output:
         send_timeline_as_file(bot_client, user_id, file_output)
     else:
-        logging.info("No messages had requested reaction")
+        logger.info("No messages had requested reaction")
         bot_client.chat_postMessage(
             channel=user_id,
             text=":sadparrot: No messages have the" f"{reaction[0]} reaction!",
