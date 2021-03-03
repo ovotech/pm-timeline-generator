@@ -13,9 +13,7 @@ SIGNING_SECRET = os.environ["SIGNING_SECRET"]
 MAIN_LAMBDA_ARN = os.environ["MAIN_LAMBDA_ARN"]
 
 
-def verify_slack_request(
-    slack_signature, slack_request_timestamp, request_body
-):
+def verify_slack_request(slack_signature, slack_request_timestamp, request_body):
     """Confirms POST to API gateway has come from Slack: concatenates headers
     and body and encodes then compares to Slack's client secret in an env var
     """
@@ -28,10 +26,7 @@ def verify_slack_request(
 
     """ Create a new HMAC "signature", and return the string presentation. """
     my_signature = (
-        "v0="
-        + hmac.new(
-            slack_signing_secret, basestring, hashlib.sha256
-        ).hexdigest()
+        "v0=" + hmac.new(slack_signing_secret, basestring, hashlib.sha256).hexdigest()
     )
 
     """ Compare the the Slack provided signature to ours.
@@ -47,43 +42,40 @@ def verify_slack_request(
 def slashcommand_reponse(problem):
 
     error_handling = {
-        'directmessage': ':rotating_light: Use this in a channel not DM!',
-        'privategroup': ':sleuth_or_spy: I can only export public channels.',
-        'noreaction': ':slackpolice: You must add a reaction!',
-        'nocolons': ':wave: You must use a reaction not string!',
-        'success': ':hourglass_flowing_sand: Exporting timeline! :hourglass:'
+        "directmessage": ":rotating_light: Use this in a channel not DM!",
+        "privategroup": ":sleuth_or_spy: I can only export public channels.",
+        "noreaction": ":slackpolice: You must add a reaction!",
+        "nocolons": ":wave: You must use a reaction not string!",
+        "success": ":hourglass_flowing_sand: Exporting timeline! :hourglass:",
     }
-    logging.info(f'returned {error_handling[problem]} to user')
-    return {
-            "statusCode": "200",
-            "body": error_handling[problem]
-            }
+    logging.info(f"returned {error_handling[problem]} to user")
+    return {"statusCode": "200", "body": error_handling[problem]}
 
 
 def process_command(command_data):
 
-    reaction = command_data.get('text', [''])[0]
-    channel_name = command_data['channel_name'][0]
+    reaction = command_data.get("text", [""])[0]
+    channel_name = command_data["channel_name"][0]
 
-    if channel_name == 'directmessage':
-        return slashcommand_reponse('directmessage')
-    if channel_name == 'privategroup':
-        return slashcommand_reponse('privategroup')
-    if reaction == '':
-        return slashcommand_reponse('noreaction')
+    if channel_name == "directmessage":
+        return slashcommand_reponse("directmessage")
+    if channel_name == "privategroup":
+        return slashcommand_reponse("privategroup")
+    if reaction == "":
+        return slashcommand_reponse("noreaction")
     if reaction[0] != ":" or reaction[-1] != ":":
-        return slashcommand_reponse('nocolons')
+        return slashcommand_reponse("nocolons")
 
-    logging.info(f'Triggering main lambda with {command_data}')
-    awslambda = boto3.client('lambda')
+    logging.info(f"Triggering main lambda with {command_data}")
+    awslambda = boto3.client("lambda")
     awslambda.invoke(
-                    FunctionName=MAIN_LAMBDA_ARN,
-                    InvocationType='Event',
-                    Payload=json.dumps(command_data)
-                    )
+        FunctionName=MAIN_LAMBDA_ARN,
+        InvocationType="Event",
+        Payload=json.dumps(command_data),
+    )
 
-    logging.info('finished triggering lambda: return OK to Slack and finish')
-    return slashcommand_reponse('success')
+    logging.info("finished triggering lambda: return OK to Slack and finish")
+    return slashcommand_reponse("success")
 
 
 def lambda_handler(event, context):
@@ -92,9 +84,7 @@ def lambda_handler(event, context):
     slack_request_timestamp = event["headers"]["X-Slack-Request-Timestamp"]
 
     if (
-        verify_slack_request(
-            slack_signature, slack_request_timestamp, event["body"]
-        )
+        verify_slack_request(slack_signature, slack_request_timestamp, event["body"])
         is True
     ):
 
@@ -105,7 +95,7 @@ def lambda_handler(event, context):
         return response
 
     """Parse the Slack data."""
-    command_data = parse_qs(event['body'])
+    command_data = parse_qs(event["body"])
     slash_returned_message = process_command(command_data)
 
     """
