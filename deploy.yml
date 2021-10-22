@@ -12,6 +12,16 @@ Parameters:
   SlackAppToken:
     Type: String
     Description: Slack app oauth token
+  LoggingDestinationArn:
+    Type: String
+    Description: The ARN of the destination for access logs
+  LoggingFormat:
+    Type: String
+    Description: A single line format of the access logs of data
+  Stage:
+    Type: String
+    Description: The stage for API Gateway
+    Default: "Prod"
 
 Resources: 
   SlackTimelineEntrypointRole:
@@ -113,3 +123,11 @@ Resources:
           Properties:
             Path: /slack_timeline_api_endpoint
             Method: ANY
+
+  SlackTimelineApiGateway:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      AccessLogSetting:
+        DestinationArn: !Ref LoggingDestinationArn
+        Format: String !Ref LoggingFormat
+      StageName: !Ref Stage
