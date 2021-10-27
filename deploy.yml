@@ -123,11 +123,26 @@ Resources:
           Properties:
             Path: /slack_timeline_api_endpoint
             Method: ANY
+            RestApiId: !Ref SlackTimelineApiGateway
 
   SlackTimelineApiGateway:
     Type: 'AWS::Serverless::Api'
     Properties:
       AccessLogSetting:
-        DestinationArn: !Ref LoggingDestinationArn
-        Format: String !Ref LoggingFormat
+        DestinationArn: !GetAtt AccessLogGroup.Arn
+        Format: !Ref LoggingFormat
       StageName: !Ref Stage
+
+  AccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    DependsOn: SlackTimelineApiGateway
+    Properties:
+      LogGroupName: !Sub /aws/agw/${SlackTimelineApiGateway}/gateway
+      RetentionInDays: 7
+
+  AccessLogSubscriptionFilter:
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingDestinationArn
+      FilterPattern: ""
+      LogGroupName: !Ref AccessLogGroup
