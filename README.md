@@ -48,10 +48,12 @@ aws s3 mb s3://deploy-timeline-<uniquename>
 Set:
 ```
 BUCKET='deploy-timeline' # Bucket to hold .yml in AWS for SAM
-STACK_NAME='slack-timeline-tool' # CF stack name
+STACK_NAME='timeline-tool' # CF stack name
 BOT_TOKEN=<slack bot token> # From slack app
 SLACK_TOKEN=<slack app token> # From slack app
 SIGNING_SECRET=<slack signing secret> # From slack app
+LOGGING_DESTINATION=<arn of logging resource>
+LOGGING_FORMAT=<desired logging format>
 ```
 
 ## Deploy
@@ -63,12 +65,14 @@ requirements to S3, create a new .yml, push to AWS then clean up after itself.
 Run:
 ```
 ./package.sh
-sam package --template-file deploy.yml \ 
---s3-bucket $BUCKET --output-template-file packaged.yml --region eu-west-1
+sam package --template-file deploy.yml \
+ --s3-bucket $BUCKET --output-template-file packaged.yml --region eu-west-1
 sam deploy --template-file packaged.yml \
  --stack-name $STACK_NAME --capabilities CAPABILITY_NAMED_IAM \
  --region eu-west-1 --parameter-overrides SigningSecret=$SIGNING_SECRET \
-SlackBotToken=$BOT_TOKEN SlackAppToken=$SLACK_TOKEN
+ SlackBotToken=$BOT_TOKEN SlackAppToken=$SLACK_TOKEN \
+ LoggingDestinationArn=$LOGGING_DESTINATION LoggingFormat=$LOGGING_FORMAT \
+ --confirm-changeset
 ./package_cleanup.sh
 
 ```
